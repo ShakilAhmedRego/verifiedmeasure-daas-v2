@@ -1,15 +1,10 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-function requiredEnv(name: string): string {
-  const v = process.env[name];
-  if (!v) throw new Error(`Missing env var: ${name}`);
-  return v;
-}
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export function createBrowserSupabaseClient(): SupabaseClient {
-  const url = requiredEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const anon = requiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  return createClient(url, anon, {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
