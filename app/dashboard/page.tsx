@@ -1,106 +1,97 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase";
 import { maskCompany, maskEmail, maskPhone, safeMetaString } from "@/lib/mask";
 
 type Lead = {
   id: string;
   company: string;
-  website: string | null;
   email: string | null;
   phone: string | null;
   meta: any;
-  created_at: string;
 };
 
 type LeadAccessRow = { lead_id: string };
 
 export default function DashboardPage() {
   const supabase = useMemo(() => supabaseBrowser(), []);
-
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [balance, setBalance] = useState<number>(0);
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [entitled, setEntitled] = useState<Set<string>>(new Set());
-
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const claimTypeRef = useRef<HTMLSelectElement | null>(null);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
       setErr(null);
 
-      const { data: sessionData, error: sessionError } =
-        await supabase.auth.getSession();
-
-      if (sessionError) {
-        setErr(sessionError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!sessionData.session) {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session) {
         window.location.href = "/login";
         return;
       }
 
-      const uid = sessionData.session.user.id;
+      const uid = session.session.user.id;
+      setUserId(uid);
+      setToken(session.session.access_token);
 
-      const { data: leadsData, error: leadsError } = await supabase
-        .from("leads")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (leadsError) {
-        setErr(leadsError.message);
-        setLoading(false);
-        return;
-      }
-
-      const { data: accessData, error: accessError } = await supabase
+      const { data: leadsData } = await supabase.from("leads").select("*");
+      const { data: accessData } = await supabase
         .from("lead_access")
         .select("lead_id")
         .eq("user_id", uid);
 
-      if (accessError) {
-        setErr(accessError.message);
-        setLoading(false);
-        return;
-      }
+      const { data: bal } = await supabase.rpc("get_user_balance", {
+        in_user_id: uid,
+      });
 
-      const entitledIds = new Set(
-        (accessData ?? []).map((r: LeadAccessRow) => r.lead_id)
-      );
-
-      setLeads((leadsData ?? []) as Lead[]);
-      setEntitled(entitledIds);
+      setLeads(leadsData ?? []);
+      setEntitled(new Set((accessData ?? []).map((r: LeadAccessRow) => r.lead_id)));
+      setBalance(Number(bal ?? 0));
       setLoading(false);
     })();
   }, [supabase]);
 
-  const filtered = leads.filter((l) => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      `${l.company ?? ""} ${l.email ?? ""} ${l.phone ?? ""} ${JSON.stringify(
-        l.meta ?? {}
-      )}`.toLowerCase().includes(q)
-    );
-  });
-
-  function toggleSelect(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+  if (loading) {
+    return <div className="text-sm text-neutral-400">Loading…</div>;
   }
 
-  if (loading) {
-    return <div className="text-sm text-neutral-400">Loading...</div>;
+  const filtered = leads.filter((l) =>
+    JSON.stringify(l).toLowerCase().includes(query.toLowerCase())
+  );
+
+  async function claimSelected() {
+    if (!token || selected.size === 0) return;
+
+    const res = await fetch("/api/claim", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        lead_ids: Array.from(selected),
+        access_type: claimTypeRef.current?.value || "download",
+      }),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      setErr(json.error || "Claim failed");
+      return;
+    }
+
+    setEntitled((prev) => new Set([...prev, ...json.newly_claimed_ids]));
+    setBalance(json.new_balance);
+    setSelected(new Set());
   }
 
   return (
@@ -108,87 +99,80 @@ export default function DashboardPage() {
       <h1 className="text-2xl font-semibold">Dashboard</h1>
 
       {err && (
-        <div className="rounded-2xl border border-red-900/60 bg-red-950/40 p-4 text-sm text-red-200">
+        <div className="rounded-xl border border-red-800 bg-red-950 p-3 text-sm text-red-200">
           {err}
         </div>
       )}
 
-      <div className="rounded-2xl border border-neutral-800 bg-neutral-950 p-5">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="mb-4 w-full rounded-xl border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm"
-          placeholder="Search preview…"
-        />
+      <input
+        className="w-full rounded-xl border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm"
+        placeholder="Search preview…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
 
-        <table className="w-full text-sm">
-          <thead className="text-xs text-neutral-400">
-            <tr>
-              <th className="px-2 py-1">Select</th>
-              <th className="px-2 py-1">Company</th>
-              <th className="px-2 py-1">Email</th>
-              <th className="px-2 py-1">Phone</th>
-              <th className="px-2 py-1">Industry</th>
-              <th className="px-2 py-1">Time Zone</th>
-              <th className="px-2 py-1">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((l) => {
-              const isEntitled = entitled.has(l.id);
+      <table className="w-full text-sm">
+        <thead className="text-xs text-neutral-400">
+          <tr>
+            <th />
+            <th>Company</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Industry</th>
+            <th>Time Zone</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.map((l) => {
+            const isEntitled = entitled.has(l.id);
+            return (
+              <tr key={l.id} className="border-t border-neutral-800">
+                <td>
+                  <input
+                    type="checkbox"
+                    disabled={isEntitled}
+                    checked={selected.has(l.id)}
+                    onChange={() =>
+                      setSelected((p) => {
+                        const n = new Set(p);
+                        n.has(l.id) ? n.delete(l.id) : n.add(l.id);
+                        return n;
+                      })
+                    }
+                  />
+                </td>
+                <td>{isEntitled ? l.company : maskCompany(l.company)}</td>
+                <td>{isEntitled ? l.email : maskEmail(l.email)}</td>
+                <td>{isEntitled ? l.phone : maskPhone(l.phone)}</td>
+                <td>{safeMetaString(l.meta, "industry")}</td>
+                <td>{safeMetaString(l.meta, "time_zone")}</td>
+                <td className="text-xs">
+                  {isEntitled ? "Entitled" : "Unlock with credits"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
 
-              return (
-                <tr
-                  key={l.id}
-                  className={`border-t border-neutral-800 ${
-                    isEntitled ? "opacity-60" : "hover:bg-neutral-900/40"
-                  }`}
-                >
-                  <td className="px-2 py-1">
-                    <input
-                      type="checkbox"
-                      disabled={isEntitled}
-                      checked={selected.has(l.id)}
-                      onChange={() => {
-                        if (!isEntitled) toggleSelect(l.id);
-                      }}
-                    />
-                  </td>
+      <div className="flex items-center gap-3">
+        <select ref={claimTypeRef} className="rounded-xl bg-neutral-900 px-3 py-2 text-sm">
+          <option value="download">download</option>
+          <option value="export">export</option>
+        </select>
 
-                  <td className="px-2 py-1 font-medium">
-                    {isEntitled ? l.company : maskCompany(l.company)}
-                  </td>
+        <button
+          disabled={selected.size === 0 || balance <= 0}
+          onClick={claimSelected}
+          className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-black disabled:opacity-40"
+        >
+          Unlock selected
+        </button>
 
-                  <td className="px-2 py-1">
-                    {isEntitled ? l.email || "-" : maskEmail(l.email)}
-                  </td>
-
-                  <td className="px-2 py-1">
-                    {isEntitled ? l.phone || "-" : maskPhone(l.phone)}
-                  </td>
-
-                  <td className="px-2 py-1 text-neutral-300">
-                    {safeMetaString(l.meta, "industry")}
-                  </td>
-
-                  <td className="px-2 py-1 text-neutral-300">
-                    {safeMetaString(l.meta, "time_zone")}
-                  </td>
-
-                  <td className="px-2 py-1 text-xs">
-                    {isEntitled ? (
-                      <span className="text-emerald-400">Entitled</span>
-                    ) : (
-                      <span className="text-neutral-500">
-                        Unlock with credits
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="text-xs text-neutral-400">
+          Credits: {balance}
+        </div>
       </div>
     </div>
   );
