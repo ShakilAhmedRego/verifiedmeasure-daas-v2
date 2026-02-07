@@ -1,6 +1,5 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "VerifiedMeasure — DaaS Control Plane",
@@ -19,53 +18,71 @@ export default function RootLayout({
         <div className="min-h-screen">
           <header className="border-b border-neutral-800 bg-neutral-950/70 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-              {/* Brand */}
+              {/* BRAND */}
               <a href="/" className="flex items-center gap-3 whitespace-nowrap">
-                {/* VM LOGO — LOCKED */}
-                <div className="relative h-8 w-8 overflow-hidden rounded-xl">
-                  <Image
-                    src="/vm.png"
-                    alt="VerifiedMeasure"
-                    fill
-                    priority
-                    className="object-cover"
-                  />
+                {/* INLINE VM LOGO — NO FILES */}
+                <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-neutral-900">
+                  <svg
+                    viewBox="0 0 100 100"
+                    width="24"
+                    height="24"
+                    aria-hidden
+                  >
+                    <rect
+                      x="0"
+                      y="0"
+                      width="100"
+                      height="100"
+                      rx="18"
+                      fill="#0A84FF"
+                    />
+                    <text
+                      x="50"
+                      y="62"
+                      textAnchor="middle"
+                      fontSize="42"
+                      fontWeight="700"
+                      fill="white"
+                      fontFamily="Inter, system-ui, sans-serif"
+                    >
+                      VM
+                    </text>
+                  </svg>
                 </div>
 
+                {/* NAME + BADGE */}
                 <div className="leading-tight">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold tracking-wide text-white">
                       VerifiedMeasure
                     </span>
-
                     <span className="rounded-full border border-slate-600 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-400">
                       DAAS
                     </span>
                   </div>
-
                   <div className="text-xs text-neutral-400">
                     DaaS Control Plane
                   </div>
                 </div>
               </a>
 
-              {/* Nav */}
+              {/* NAV */}
               <nav className="flex items-center gap-3 text-sm">
                 <a
-                  className="rounded-lg px-3 py-2 hover:bg-neutral-900"
                   href="/dashboard"
+                  className="rounded-lg px-3 py-2 hover:bg-neutral-900"
                 >
                   Dashboard
                 </a>
                 <a
-                  className="rounded-lg px-3 py-2 hover:bg-neutral-900"
                   href="/admin"
+                  className="rounded-lg px-3 py-2 hover:bg-neutral-900"
                 >
                   Admin
                 </a>
                 <a
-                  className="rounded-lg px-3 py-2 hover:bg-neutral-900"
                   href="/login"
+                  className="rounded-lg px-3 py-2 hover:bg-neutral-900"
                 >
                   Login
                 </a>
