@@ -1,5 +1,6 @@
 import "./globals.css";
 import type { Metadata } from "next";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "VerifiedMeasure — DaaS Control Plane",
@@ -20,8 +21,16 @@ export default function RootLayout({
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
               {/* Brand */}
               <a href="/" className="flex items-center gap-3 whitespace-nowrap">
-                {/* Logo placeholder (safe until VM logo exists) */}
-                <div className="h-8 w-8 rounded-xl bg-neutral-800" />
+                {/* VM LOGO — LOCKED */}
+                <div className="relative h-8 w-8 overflow-hidden rounded-xl">
+                  <Image
+                    src="/vm.png"
+                    alt="VerifiedMeasure"
+                    fill
+                    priority
+                    className="object-cover"
+                  />
+                </div>
 
                 <div className="leading-tight">
                   <div className="flex items-center gap-2">
