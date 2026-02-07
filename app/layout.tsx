@@ -19,23 +19,21 @@ export default function RootLayout({
           <header className="border-b border-neutral-800 bg-neutral-950/70 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
               {/* Brand */}
-              <a href="/" className="flex items-center gap-3">
-                {/* VM Logo */}
-                <img
-                  src="/vm-logo.png" // replace with your actual asset path
-                  alt="VerifiedMeasure"
-                  className="h-8 w-8"
-                />
+              <a href="/" className="flex items-center gap-3 whitespace-nowrap">
+                {/* Logo placeholder (safe until VM logo exists) */}
+                <div className="h-8 w-8 rounded-xl bg-neutral-800" />
 
                 <div className="leading-tight">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold tracking-wide text-white">
                       VerifiedMeasure
                     </span>
-                    <span className="rounded-md border border-slate-600 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-400">
+
+                    <span className="rounded-full border border-slate-600 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-slate-400">
                       DAAS
                     </span>
                   </div>
+
                   <div className="text-xs text-neutral-400">
                     DaaS Control Plane
                   </div>
